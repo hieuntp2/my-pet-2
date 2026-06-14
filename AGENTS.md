@@ -40,6 +40,31 @@ Use:
 
 Java is allowed only for Android/legacy interop when necessary.
 
+## Mobile Orientation Constraint
+
+This app is phone-landscape-only. Do not build, optimize, or test the primary gameplay/application layout for portrait phone orientation. On phones in portrait orientation, show a rotate-device message or blocker instead of attempting to support a portrait UI. The main experience should target landscape phone viewports, with safe-area handling for notches and mobile browser UI where relevant. Preserve existing asset-loading, blink runtime, and idle animation behavior when making orientation or layout changes.
+
+## Multi-Agent Workflow Guidance
+
+Use a multi-agent workflow whenever it can improve speed, code quality, review depth, or implementation safety. Prefer multi-agent work for non-trivial tasks, cross-file refactors, UI/runtime changes, performance-sensitive changes, architecture decisions, testing strategy, or changes that could affect asset loading, animation runtime, orientation handling, or user experience.
+
+Suggested roles:
+
+- Implementation agent: makes the primary code changes.
+- Review agent: checks correctness, regressions, edge cases, and adherence to AGENTS.md.
+- Test/QA agent: validates behavior, acceptance criteria, and possible runtime issues.
+- Design/runtime agent when relevant: checks UI, animation, layout, responsiveness, and visual polish.
+
+Do not use multi-agent coordination when the task is tiny and the coordination overhead would clearly outweigh the benefit. For small isolated edits, a single-agent workflow is acceptable.
+
+When using multiple agents:
+
+- Keep responsibilities clearly separated.
+- Avoid conflicting edits to the same files.
+- Reconcile outputs before finalizing.
+- Ensure the final result is coherent, minimal, and consistent with project conventions.
+- Always verify that existing asset-loading, blink behavior, idle animation, and phone-landscape behavior remain intact.
+
 ## Expected Modules
 
 ```text

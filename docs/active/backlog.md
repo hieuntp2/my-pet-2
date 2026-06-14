@@ -109,7 +109,7 @@ Completed in 2026-06-14 run:
 
 ## R4 — Add Subtle Idle Breathing/Floating
 
-Status: TODO
+Status: DONE
 
 Goal: Add subtle idle motion so the pet does not feel static.
 
@@ -131,6 +131,11 @@ Definition of Done:
 Next recommended task:
 - Add a tiny code-driven breathing/floating layer around the existing eye sprite without changing the asset-loading path.
 - Add a debug preview toggle only if needed to tune motion amplitude and timing.
+
+Completed in 2026-06-14 run:
+- Added code-driven sine-wave idle motion around the existing avatar render tree.
+- Kept motion subtle with about 2px vertical float and 0.6% scaleY breathing.
+- Preserved asset loading and blink runtime.
 
 ---
 

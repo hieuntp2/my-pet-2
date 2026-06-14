@@ -1,5 +1,6 @@
 package com.example.pixelpet.avatar
 
+import android.provider.Settings
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -15,6 +16,7 @@ import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
@@ -40,35 +42,51 @@ fun PixelPetAvatar(
         )
     }
     var frame by remember(controller) { mutableStateOf(controller.tick(nowMs = 0L)) }
+    var idleMotion by remember(controller) { mutableStateOf(IdleMotionFrame.Neutral) }
+    val motionEnabled = rememberSystemMotionEnabled()
 
-    LaunchedEffect(controller) {
+    LaunchedEffect(controller, motionEnabled) {
         val startNanos = withFrameNanos { it }
         while (isActive) {
             withFrameNanos { frameTimeNanos ->
-                frame = controller.tick((frameTimeNanos - startNanos) / 1_000_000L)
+                val elapsedMs = (frameTimeNanos - startNanos) / 1_000_000L
+                frame = controller.tick(elapsedMs)
+                idleMotion = IdleMotion.frameAt(
+                    elapsedMs = elapsedMs,
+                    motionEnabled = motionEnabled,
+                )
             }
         }
     }
 
     Box(modifier = modifier) {
-        Canvas(modifier = Modifier.fillMaxSize()) {
-            val sheet = when (frame.state) {
-                PetAnimationState.LookingIdle -> assets.idle
-                PetAnimationState.LookingBlink -> assets.blink
-            }
-
-            if (assets.hasRequiredSheets && sheet != null) {
-                with(PixelPetRenderer) {
-                    drawSprite(
-                        spriteSheet = sheet,
-                        frameIndex = frame.frameIndex,
-                        lookOffsetX = frame.lookOffsetX,
-                        lookOffsetY = frame.lookOffsetY,
-                    )
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .graphicsLayer {
+                    translationY = idleMotion.translationY
+                    scaleY = idleMotion.scaleY
+                },
+        ) {
+            Canvas(modifier = Modifier.fillMaxSize()) {
+                val sheet = when (frame.state) {
+                    PetAnimationState.LookingIdle -> assets.idle
+                    PetAnimationState.LookingBlink -> assets.blink
                 }
-            } else {
-                with(PixelPetRenderer) {
-                    drawFallback(frame)
+
+                if (assets.hasRequiredSheets && sheet != null) {
+                    with(PixelPetRenderer) {
+                        drawSprite(
+                            spriteSheet = sheet,
+                            frameIndex = frame.frameIndex,
+                            lookOffsetX = frame.lookOffsetX,
+                            lookOffsetY = frame.lookOffsetY,
+                        )
+                    }
+                } else {
+                    with(PixelPetRenderer) {
+                        drawFallback(frame)
+                    }
                 }
             }
         }
@@ -96,6 +114,19 @@ fun PixelPetAvatar(
                 ),
             )
         }
+    }
+}
+
+@Composable
+private fun rememberSystemMotionEnabled(): Boolean {
+    val context = LocalContext.current
+    return remember(context) {
+        val animatorScale = Settings.Global.getFloat(
+            context.contentResolver,
+            Settings.Global.ANIMATOR_DURATION_SCALE,
+            1f,
+        )
+        animatorScale != 0f
     }
 }
 

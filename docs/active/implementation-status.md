@@ -1,3 +1,55 @@
+## AutoDev Run - 2026-06-14 Landscape Orientation Constraint
+
+**Task:** Make the app phone-landscape-only and document the constraint.
+**Build:** PASSED with `.\gradlew.bat :app:testDebugUnitTest :ui-avatar:testDebugUnitTest assembleDebug --stacktrace`.
+**Tests:** PASSED with `:app:testDebugUnitTest` and `:ui-avatar:testDebugUnitTest`.
+
+**Implemented:**
+
+- Locked the native Android activity to landscape orientation.
+- Added a defensive phone-portrait Compose blocker that says, "Rotate your phone to landscape."
+- Added unit tests for the phone orientation policy.
+- Preserved the existing asset loader, blink runtime, and idle breathing/floating runtime.
+- Documented the phone-landscape-only constraint in `AGENTS.md`.
+
+**Next Recommended Task:** R5 - Add Emotion States and Debug Preview.
+
+---
+
+## AutoDev Run - 2026-06-14 R4 Idle Motion
+
+**Task:** R4 - Add Subtle Idle Breathing/Floating.
+**Build:** PASSED with `.\gradlew.bat :ui-avatar:testDebugUnitTest assembleDebug --stacktrace`.
+**Tests:** PASSED with `:ui-avatar:testDebugUnitTest`.
+
+**Implemented:**
+
+- Added `IdleMotion` sine-wave helper for subtle vertical float and scaleY breathing.
+- Wrapped the existing avatar Canvas render tree in an outer `graphicsLayer` transform.
+- Reused the existing Compose `withFrameNanos` loop, so no extra timer or animation library was added.
+- Preserved asset-loading paths and blink state/runtime behavior.
+- Disabled idle motion when Android system animator duration scale is set to zero.
+
+**Next Recommended Task:** R5 - Add Emotion States and Debug Preview.
+
+---
+
+## AutoDev Run - 2026-06-14 Build Sync Fix
+
+**Task:** Fix Android Studio/Gradle source-set resolution failure.
+**Build:** PASSED with `.\gradlew.bat :ui-avatar:testDebugUnitTest assembleDebug --stacktrace`.
+**Regression check:** PASSED with `.\gradlew.bat :brain:compileJava --stacktrace`.
+
+**Fixed:**
+
+- Removed unnecessary `jvmToolchain(17)` pins from empty JVM placeholder modules.
+- Resolved Gradle source-set model failure caused by missing local Java 17 toolchain.
+- Kept Android and avatar animation modules unchanged.
+
+**Next Recommended Task:** R5 - Add Emotion States and Debug Preview.
+
+---
+
 ## AutoDev Run - 2026-06-14
 
 **Task:** R1/R2/R3 combined first Android eye-animation milestone from explicit user request.
@@ -25,7 +77,7 @@
 - Kept `brain`, `memory`, and `core-common` as minimal Kotlin modules with no feature logic yet.
 - Did not add persistence, personality, interaction reactions, camera, audio, cloud AI, BLE, Wi-Fi, or robot control.
 
-**Next Recommended Task:** R4 - Add Subtle Idle Breathing/Floating.
+**Next Recommended Task:** R5 - Add Emotion States and Debug Preview.
 
 ---
 
@@ -35,19 +87,20 @@ Generated: 2026-06-14
 
 ## Current State
 
-First Android animation milestone exists.
+First Android animation milestone exists with subtle idle motion.
 
-The app opens to a single dark cyber-style pixel pet screen. The avatar runtime renders the 64x32 eye sprite sheets from Android assets when present and falls back to a simple Canvas two-eye renderer if runtime assets are missing or invalid.
+The app opens to a single dark cyber-style pixel pet screen. The avatar runtime renders the 64x32 eye sprite sheets from Android assets when present and falls back to a simple Canvas two-eye renderer if runtime assets are missing or invalid. The avatar render tree now gently floats and breathes in code while preserving blink behavior.
 
 ## Current Active Task
 
-R4 - Add Subtle Idle Breathing/Floating
+R5 - Add Emotion States and Debug Preview
 
 ## Completed Tasks
 
 - R1 - Create Android Kotlin Project Skeleton
 - R2 - Render Original Pixel-Style Two-Eye Avatar
 - R3 - Add Natural Blink Animation
+- R4 - Add Subtle Idle Breathing/Floating
 
 ## Blocked Tasks
 
@@ -66,16 +119,16 @@ Do not implement:
 Current priority is:
 
 ```text
-R4 -> R5
+R5
 ```
 
 ## Last Run Summary
 
-Built the Android skeleton and first eye animation runtime. Looking idle loops continuously, looking blink interrupts idle at randomized intervals, optional double blink is supported, and randomized look offsets are subtle. Required assets were copied into `app/src/main/assets/pet/eyes/`.
+Added subtle code-driven idle breathing/floating around the existing avatar render tree. Looking idle and blink still use the existing asset loader and behavior controller.
 
 ## Next Recommended Task
 
-R4 - Add Subtle Idle Breathing/Floating
+R5 - Add Emotion States and Debug Preview
 
 ## Notes for AutoDev
 

@@ -14,7 +14,7 @@
 
 ## R1 — Create Android Kotlin Project Skeleton
 
-Status: TODO
+Status: DONE
 
 Goal: Create a native Android Kotlin project with modules ready for animation-first development.
 
@@ -39,11 +39,16 @@ Definition of Done:
 - Home screen is visible.
 - No camera/audio/cloud/body dependencies exist.
 
+Completed in 2026-06-14 run:
+- Created Gradle project at repo root with app, ui-avatar, brain, memory, and core-common modules.
+- Added Compose app shell with a single Home screen.
+- Added no camera, audio, cloud, robot, persistence, or assistant dependencies.
+
 ---
 
 ## R2 — Render Original Pixel-Style Two-Eye Avatar
 
-Status: TODO
+Status: DONE
 
 Goal: Render a static original two-eye pixel avatar on Home screen.
 
@@ -66,11 +71,16 @@ Definition of Done:
 - Rendering is reusable for future animation.
 - Build passes.
 
+Completed in 2026-06-14 run:
+- Added centered Compose Canvas renderer for 64x32 eye sprite frames.
+- Loaded eye PNGs from Android assets with nearest-neighbor drawing.
+- Added fallback two-eye renderer for missing or invalid runtime assets.
+
 ---
 
 ## R3 — Add Natural Blink Animation
 
-Status: TODO
+Status: DONE
 
 Goal: Make the eyes blink automatically with non-uniform natural timing.
 
@@ -89,6 +99,11 @@ Definition of Done:
 - Blink interval varies.
 - Close/open timing feels natural.
 - Build passes.
+
+Completed in 2026-06-14 run:
+- Added randomized blink scheduling with 2.5s-7s normal intervals.
+- Added optional double blink with 100ms-180ms gap.
+- Added elapsed-time one-shot blink animation that returns to looking idle.
 
 ---
 
@@ -112,6 +127,10 @@ Definition of Done:
 - Motion is calm and not distracting.
 - Blink still works.
 - Build passes.
+
+Next recommended task:
+- Add a tiny code-driven breathing/floating layer around the existing eye sprite without changing the asset-loading path.
+- Add a debug preview toggle only if needed to tune motion amplitude and timing.
 
 ---
 

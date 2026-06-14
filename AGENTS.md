@@ -98,6 +98,34 @@ Not allowed:
 - making the avatar look like a commercial robot clone
 - using mouth/full body in the MVP unless a later task explicitly permits it
 
+
+## Asset Source Policy
+
+Animation and pixel-art source files provided by the user must be placed under the repository-level `resources/` directory before implementation.
+
+For the first eye animation milestone, Codex must look for source files here:
+
+```text
+resources/pet/eyes/looking-idle.png
+resources/pet/eyes/looking-blink.png
+```
+
+Codex must copy these files into the Android app assets folder before building/running the app:
+
+```text
+app/src/main/assets/pet/eyes/looking-idle.png
+app/src/main/assets/pet/eyes/looking-blink.png
+```
+
+Rules:
+
+- Do not rename these files when using `assets/`.
+- Do not move hyphenated animation files into `res/drawable`.
+- Load these files through Android assets / AssetManager-compatible loading.
+- Treat `resources/` as the editable source-of-truth for user-provided art.
+- Treat `app/src/main/assets/` as the runtime location used by the Android app.
+- If a required asset is missing from `resources/`, stop and report the missing file instead of inventing a placeholder production asset.
+
 ## Task Rules
 
 For every task:

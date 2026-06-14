@@ -17,7 +17,8 @@ The first goal is not camera, audio, voice, cloud AI, or robot body control. The
 3. `docs/product/scope.md`
 4. `docs/product/roadmap.md`
 5. `docs/active/backlog.md`
-6. `docs/active/implementation-status.md`
+6. `docs/animation/looking_idle_blink_android_spec.md`
+7. `docs/active/implementation-status.md`
 
 ## Recommended First Tasks
 
@@ -30,3 +31,20 @@ The first goal is not camera, audio, voice, cloud AI, or robot body control. The
 ## Originality Rule
 
 This is an original digital pet. It may be inspired by the broad category of desktop pets and companion robots, but it must not copy EMO's exact design, animation, branding, assets, sounds, layout, or product identity.
+
+## User-Provided Animation Resources
+
+Put original animation assets here before asking Codex to implement an animation milestone:
+
+```text
+resources/pet/eyes/looking-idle.png
+resources/pet/eyes/looking-blink.png
+```
+
+Codex should copy them to the Android runtime assets folder:
+
+```text
+app/src/main/assets/pet/eyes/
+```
+
+Keep hyphenated filenames in `assets/`, not `res/drawable`.

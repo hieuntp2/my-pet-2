@@ -1,0 +1,31 @@
+{
+  "clips": [
+    {
+      "id": "curious_magnifier",
+      "asset": "curious_magnifier",
+      "frameWidth": 64,
+      "frameHeight": 32,
+      "frameCount": 4,
+      "frameSequence": [0, 1, 2, 3],
+      "frameDurationsMs": [220, 180, 520, 650],
+      "loop": true,
+      "holdFinalFrame": false,
+      "replayCooldownMs": 0,
+      "priority": 10
+    },
+    {
+      "id": "happy_reward_sparkle",
+      "asset": "happy_reward_sparkle",
+      "frameWidth": 64,
+      "frameHeight": 32,
+      "frameCount": 4,
+      "frameSequence": [0, 1, 2, 3],
+      "frameDurationsMs": [220, 180, 420, 520],
+      "loop": false,
+      "holdFinalFrame": true,
+      "nextStage": "looking_idle",
+      "replayCooldownMs": 0,
+      "priority": 20
+    }
+  ]
+}

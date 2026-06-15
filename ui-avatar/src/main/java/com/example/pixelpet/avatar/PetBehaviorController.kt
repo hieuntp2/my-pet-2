@@ -27,13 +27,21 @@ data class PetAnimationFrame(
 class PetBehaviorController(
     private val idleAnimation: SpriteAnimation,
     private val blinkAnimation: SpriteAnimation,
-    private val curiousAnimation: SpriteAnimation = PetAnimationClips.curiousMagnifierAnimation(),
-    private val happyRewardAnimation: SpriteAnimation = PetAnimationClips.happyRewardSparkleAnimation(),
+    private val curiousAnimation: SpriteAnimation = PetAnimationClips.fallback().animationFor(PetAnimationClips.CURIOUS_MAGNIFIER),
+    private val happyRewardAnimation: SpriteAnimation = PetAnimationClips.fallback().animationFor(PetAnimationClips.HAPPY_REWARD_SPARKLE),
     private val startupPreviewEnabled: Boolean = false,
     private val startupPreviewStages: List<PetAnimationState> = PetStartupPreview.DefaultStageStates,
     private val random: AvatarRandom = KotlinAvatarRandom(),
     private val config: PetBehaviorConfig = PetBehaviorConfig(),
 ) {
+    private val stageRegistry = PetAnimationStageRegistry(
+        mapOf(
+            PetAnimationState.LookingIdle to LookingIdleStage(idleAnimation),
+            PetAnimationState.LookingBlink to LookingBlinkStage(blinkAnimation),
+            PetAnimationState.Curious to CuriousStage(curiousAnimation),
+            PetAnimationState.HappyReward to HappyRewardStage(happyRewardAnimation),
+        ),
+    )
     private var state = PetAnimationState.LookingIdle
     private var stateStartedAtMs = 0L
     private var nextBlinkAtMs = random.nextLong(
@@ -59,11 +67,12 @@ class PetBehaviorController(
 
         val previewActive = updateStartupPreview(safeNowMs)
 
-        if (state == PetAnimationState.HappyReward && happyRewardAnimation.isComplete(safeNowMs - stateStartedAtMs)) {
+        val completedNextStage = currentStage().nextStageOnComplete(safeNowMs - stateStartedAtMs)
+        if (completedNextStage == PetAnimationState.LookingIdle && state == PetAnimationState.HappyReward) {
             finishHappyReward(safeNowMs)
         }
 
-        if (!previewActive && state == PetAnimationState.LookingBlink && blinkAnimation.isComplete(safeNowMs - stateStartedAtMs)) {
+        if (!previewActive && completedNextStage == PetAnimationState.LookingIdle && state == PetAnimationState.LookingBlink) {
             finishBlink(safeNowMs)
         }
 
@@ -79,12 +88,7 @@ class PetBehaviorController(
             updateGaze(safeNowMs)
         }
 
-        val frameIndex = when (state) {
-            PetAnimationState.LookingIdle -> idleAnimation.frameAt(safeNowMs)
-            PetAnimationState.LookingBlink -> blinkAnimation.frameAt(safeNowMs - stateStartedAtMs)
-            PetAnimationState.Curious -> curiousAnimation.frameAt(safeNowMs - stateStartedAtMs)
-            PetAnimationState.HappyReward -> happyRewardAnimation.frameAt(safeNowMs - stateStartedAtMs)
-        }
+        val frameIndex = currentStage().frameAt(elapsedForCurrentStage(safeNowMs))
         val gazeOffset = activeGaze?.offsetAt(safeNowMs) ?: GazeOffset.Center
 
         return PetAnimationFrame(
@@ -164,9 +168,9 @@ class PetBehaviorController(
 
     private fun previewDurationFor(previewState: PetAnimationState): Long = when (previewState) {
         PetAnimationState.LookingIdle -> PetStartupPreview.IDLE_STAGE_DURATION_MS
-        PetAnimationState.LookingBlink -> blinkAnimation.totalDurationMs
-        PetAnimationState.Curious -> curiousAnimation.totalDurationMs
-        PetAnimationState.HappyReward -> happyRewardAnimation.totalDurationMs
+        PetAnimationState.LookingBlink -> stageRegistry.stageFor(PetAnimationState.LookingBlink).totalDurationMs
+        PetAnimationState.Curious -> stageRegistry.stageFor(PetAnimationState.Curious).totalDurationMs
+        PetAnimationState.HappyReward -> stageRegistry.stageFor(PetAnimationState.HappyReward).totalDurationMs
     }
 
     private fun startBlink(nowMs: Long, canScheduleDoubleBlink: Boolean) {
@@ -225,6 +229,13 @@ class PetBehaviorController(
         } else {
             (scheduledBlinkAtMs - nowMs).coerceAtLeast(0L)
         }
+    }
+
+    private fun currentStage(): PetAnimationStage = stageRegistry.stageFor(state)
+
+    private fun elapsedForCurrentStage(nowMs: Long): Long = when (state) {
+        PetAnimationState.LookingIdle -> nowMs
+        else -> nowMs - stateStartedAtMs
     }
 
     private fun changeState(newState: PetAnimationState, nowMs: Long, reason: String) {

@@ -31,8 +31,9 @@ fun PixelPetAvatar(
 ) {
     val context = LocalContext.current
     val assets = remember(context) { PixelPetAssetLoader.load(context.assets) }
+    val animationClips = remember(context) { PetAnimationClips.load(context.resources, context.assets) }
     val startupPreviewEnabled = debugVisualState == null
-    val controller = remember(assets, debugVisualState) {
+    val controller = remember(assets, animationClips, debugVisualState) {
         PetBehaviorController(
             idleAnimation = SpriteAnimation.looping(
                 frameCount = assets.idle?.sheet?.frameCount ?: 4,
@@ -41,8 +42,8 @@ fun PixelPetAvatar(
             blinkAnimation = SpriteAnimation.oneShot(
                 frameDurationsMs = blinkDurationsFor(assets.blink?.sheet?.frameCount ?: 5),
             ),
-            curiousAnimation = PetAnimationClips.curiousMagnifierAnimation(),
-            happyRewardAnimation = PetAnimationClips.happyRewardSparkleAnimation(),
+            curiousAnimation = animationClips.animationFor(PetAnimationClips.CURIOUS_MAGNIFIER),
+            happyRewardAnimation = animationClips.animationFor(PetAnimationClips.HAPPY_REWARD_SPARKLE),
             startupPreviewEnabled = startupPreviewEnabled,
         )
     }

@@ -8,13 +8,17 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
+import com.example.pixelpet.avatar.PetAnimationState
 import com.example.pixelpet.avatar.PixelPetAvatar
 
 @Composable
-fun PixelPetScreen() {
+fun PixelPetScreen(debugVisualState: PetAnimationState? = null) {
     Box(modifier = Modifier.fillMaxSize()) {
         CyberBackground(modifier = Modifier.fillMaxSize())
-        PixelPetAvatar(modifier = Modifier.fillMaxSize())
+        PixelPetAvatar(
+            modifier = Modifier.fillMaxSize(),
+            debugVisualState = debugVisualState,
+        )
     }
 }
 

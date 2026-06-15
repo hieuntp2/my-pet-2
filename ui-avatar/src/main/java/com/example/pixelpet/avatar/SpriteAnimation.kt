@@ -39,6 +39,9 @@ class SpriteAnimation private constructor(
             return SpriteAnimation(List(frameCount) { frameDurationMs }, loops = true)
         }
 
+        fun looping(frameDurationsMs: List<Long>): SpriteAnimation =
+            SpriteAnimation(frameDurationsMs, loops = true)
+
         fun oneShot(frameDurationsMs: List<Long>): SpriteAnimation =
             SpriteAnimation(frameDurationsMs, loops = false)
     }

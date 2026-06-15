@@ -1,5 +1,7 @@
 package com.example.pixelpet.avatar
 
+import kotlin.math.roundToInt
+
 data class PetBehaviorConfig(
     val initialBlinkDelayMinMs: Long = 1_500L,
     val initialBlinkDelayMaxMs: Long = 4_000L,
@@ -8,8 +10,10 @@ data class PetBehaviorConfig(
     val doubleBlinkChance: Float = 0.12f,
     val doubleBlinkGapMinMs: Long = 100L,
     val doubleBlinkGapMaxMs: Long = 180L,
-    val minLookIntervalMs: Long = 2_000L,
-    val maxLookIntervalMs: Long = 5_000L,
+    val minGazeIntervalMs: Long = 4_000L,
+    val maxGazeIntervalMs: Long = 9_000L,
+    val minGazeDurationMs: Long = 1_500L,
+    val maxGazeDurationMs: Long = 2_500L,
 )
 
 data class PetAnimationFrame(
@@ -23,6 +27,8 @@ data class PetAnimationFrame(
 class PetBehaviorController(
     private val idleAnimation: SpriteAnimation,
     private val blinkAnimation: SpriteAnimation,
+    private val curiousAnimation: SpriteAnimation = PetAnimationClips.curiousMagnifierAnimation(),
+    private val happyRewardAnimation: SpriteAnimation = PetAnimationClips.happyRewardSparkleAnimation(),
     private val random: AvatarRandom = KotlinAvatarRandom(),
     private val config: PetBehaviorConfig = PetBehaviorConfig(),
 ) {
@@ -32,13 +38,21 @@ class PetBehaviorController(
         config.initialBlinkDelayMinMs,
         config.initialBlinkDelayMaxMs,
     )
-    private var nextLookAtMs = config.minLookIntervalMs
+    private var nextGazeAtMs = random.nextLong(
+        config.minGazeIntervalMs,
+        config.maxGazeIntervalMs,
+    )
     private var pendingDoubleBlinkAtMs: Long? = null
     private var pendingDoubleBlinkGapMs: Long? = null
-    private var currentLook = LookDirection.Center
+    private var activeGaze: ActiveGaze? = null
+    private var lastGazeDirection: LookDirection? = null
 
     fun tick(nowMs: Long): PetAnimationFrame {
         val safeNowMs = nowMs.coerceAtLeast(0L)
+
+        if (state == PetAnimationState.HappyReward && happyRewardAnimation.isComplete(safeNowMs - stateStartedAtMs)) {
+            finishHappyReward(safeNowMs)
+        }
 
         if (state == PetAnimationState.LookingBlink && blinkAnimation.isComplete(safeNowMs - stateStartedAtMs)) {
             finishBlink(safeNowMs)
@@ -52,26 +66,55 @@ class PetBehaviorController(
             startBlink(safeNowMs, canScheduleDoubleBlink = true)
         }
 
-        if (state == PetAnimationState.LookingIdle && safeNowMs >= nextLookAtMs) {
-            updateLookDirection(safeNowMs)
+        if (state == PetAnimationState.LookingIdle) {
+            updateGaze(safeNowMs)
         }
 
         val frameIndex = when (state) {
             PetAnimationState.LookingIdle -> idleAnimation.frameAt(safeNowMs)
             PetAnimationState.LookingBlink -> blinkAnimation.frameAt(safeNowMs - stateStartedAtMs)
+            PetAnimationState.Curious -> curiousAnimation.frameAt(safeNowMs - stateStartedAtMs)
+            PetAnimationState.HappyReward -> happyRewardAnimation.frameAt(safeNowMs - stateStartedAtMs)
         }
+        val gazeOffset = activeGaze?.offsetAt(safeNowMs) ?: GazeOffset.Center
 
         return PetAnimationFrame(
             state = state,
             frameIndex = frameIndex,
-            lookOffsetX = currentLook.offsetX,
-            lookOffsetY = currentLook.offsetY,
+            lookOffsetX = gazeOffset.x,
+            lookOffsetY = gazeOffset.y,
             nextBlinkInMs = nextBlinkDelayFrom(safeNowMs),
         )
     }
 
+    fun enterCurious(nowMs: Long) {
+        val safeNowMs = nowMs.coerceAtLeast(0L)
+        if (state == PetAnimationState.Curious) {
+            return
+        }
+
+        changeState(PetAnimationState.Curious, safeNowMs, reason = "enter_curious")
+        stateStartedAtMs = safeNowMs
+        activeGaze = null
+        pendingDoubleBlinkAtMs = null
+        pendingDoubleBlinkGapMs = null
+    }
+
+    fun enterHappyReward(nowMs: Long) {
+        val safeNowMs = nowMs.coerceAtLeast(0L)
+        if (state == PetAnimationState.HappyReward) {
+            return
+        }
+
+        changeState(PetAnimationState.HappyReward, safeNowMs, reason = "enter_happy_reward")
+        stateStartedAtMs = safeNowMs
+        activeGaze = null
+        pendingDoubleBlinkAtMs = null
+        pendingDoubleBlinkGapMs = null
+    }
+
     private fun startBlink(nowMs: Long, canScheduleDoubleBlink: Boolean) {
-        state = PetAnimationState.LookingBlink
+        changeState(PetAnimationState.LookingBlink, nowMs, reason = "blink_start")
         stateStartedAtMs = nowMs
         nextBlinkAtMs = Long.MAX_VALUE
 
@@ -83,7 +126,7 @@ class PetBehaviorController(
     }
 
     private fun finishBlink(nowMs: Long) {
-        state = PetAnimationState.LookingIdle
+        changeState(PetAnimationState.LookingIdle, nowMs, reason = "blink_complete")
         stateStartedAtMs = nowMs
 
         val doubleBlinkGapMs = pendingDoubleBlinkGapMs
@@ -95,9 +138,28 @@ class PetBehaviorController(
         }
     }
 
-    private fun updateLookDirection(nowMs: Long) {
-        currentLook = LookDirection.fromRoll(random.nextFloat())
-        nextLookAtMs = nowMs + random.nextLong(config.minLookIntervalMs, config.maxLookIntervalMs)
+    private fun finishHappyReward(nowMs: Long) {
+        changeState(PetAnimationState.LookingIdle, nowMs, reason = "happy_reward_complete")
+        stateStartedAtMs = nowMs
+        nextBlinkAtMs = nowMs + random.nextLong(config.minBlinkIntervalMs, config.maxBlinkIntervalMs)
+    }
+
+    private fun updateGaze(nowMs: Long) {
+        val gaze = activeGaze
+        if (gaze != null && gaze.isComplete(nowMs)) {
+            activeGaze = null
+            nextGazeAtMs = nowMs + random.nextLong(config.minGazeIntervalMs, config.maxGazeIntervalMs)
+        }
+
+        if (activeGaze == null && pendingDoubleBlinkAtMs == null && nowMs >= nextGazeAtMs) {
+            val direction = LookDirection.fromGazeRoll(random.nextFloat()).withoutRepeating(lastGazeDirection)
+            lastGazeDirection = direction
+            activeGaze = ActiveGaze(
+                startedAtMs = nowMs,
+                durationMs = random.nextLong(config.minGazeDurationMs, config.maxGazeDurationMs),
+                direction = direction,
+            )
+        }
     }
 
     private fun nextBlinkDelayFrom(nowMs: Long): Long {
@@ -108,25 +170,99 @@ class PetBehaviorController(
             (scheduledBlinkAtMs - nowMs).coerceAtLeast(0L)
         }
     }
+
+    private fun changeState(newState: PetAnimationState, nowMs: Long, reason: String) {
+        val oldState = state
+        if (oldState != newState) {
+            AvatarDebugLog.stateChanged(oldState, newState, nowMs, reason)
+        }
+        state = newState
+    }
 }
 
 private enum class LookDirection(
     val offsetX: Int,
     val offsetY: Int,
 ) {
-    Center(offsetX = 0, offsetY = 0),
-    Right(offsetX = 2, offsetY = 0),
-    Left(offsetX = -2, offsetY = 0),
-    Up(offsetX = 0, offsetY = -1),
-    Down(offsetX = 0, offsetY = 1);
+    Right(offsetX = 4, offsetY = 0),
+    Left(offsetX = -4, offsetY = 0),
+    Up(offsetX = 0, offsetY = -2),
+    Down(offsetX = 0, offsetY = 2);
+
+    fun withoutRepeating(previous: LookDirection?): LookDirection {
+        if (this != previous) {
+            return this
+        }
+
+        return when (this) {
+            Right -> Left
+            Left -> Right
+            Up -> Down
+            Down -> Up
+        }
+    }
 
     companion object {
-        fun fromRoll(roll: Float): LookDirection = when {
-            roll < 0.70f -> Center
-            roll < 0.80f -> Right
-            roll < 0.90f -> Left
-            roll < 0.95f -> Up
+        fun fromGazeRoll(roll: Float): LookDirection = when {
+            roll < 0.42f -> Right
+            roll < 0.84f -> Left
+            roll < 0.92f -> Up
             else -> Down
         }
+    }
+}
+
+private data class GazeOffset(
+    val x: Int,
+    val y: Int,
+) {
+    companion object {
+        val Center = GazeOffset(x = 0, y = 0)
+    }
+}
+
+private data class ActiveGaze(
+    val startedAtMs: Long,
+    val durationMs: Long,
+    val direction: LookDirection,
+) {
+    private val moveDurationMs: Long = ((durationMs * MOVE_FRACTION).toLong())
+        .coerceIn(MIN_MOVE_DURATION_MS, MAX_MOVE_DURATION_MS)
+    private val returnDurationMs: Long = moveDurationMs
+    private val settleDurationMs: Long = SETTLE_DURATION_MS.coerceAtMost(durationMs / 4L)
+    private val holdDurationMs: Long = (durationMs - moveDurationMs - returnDurationMs - settleDurationMs)
+        .coerceAtLeast(0L)
+
+    fun offsetAt(nowMs: Long): GazeOffset {
+        val elapsedMs = (nowMs - startedAtMs).coerceAtLeast(0L)
+        val returnStartsAtMs = moveDurationMs + holdDurationMs
+        val settleStartsAtMs = returnStartsAtMs + returnDurationMs
+
+        return when {
+            elapsedMs < moveDurationMs -> scaledOffset(elapsedMs.toFloat() / moveDurationMs)
+            elapsedMs < returnStartsAtMs -> GazeOffset(direction.offsetX, direction.offsetY)
+            elapsedMs < settleStartsAtMs -> {
+                val returnProgress = (elapsedMs - returnStartsAtMs).toFloat() / returnDurationMs
+                scaledOffset(1f - returnProgress)
+            }
+            else -> GazeOffset.Center
+        }
+    }
+
+    fun isComplete(nowMs: Long): Boolean = nowMs - startedAtMs >= durationMs
+
+    private fun scaledOffset(progress: Float): GazeOffset {
+        val easedProgress = progress.coerceIn(0f, 1f)
+        return GazeOffset(
+            x = (direction.offsetX * easedProgress).roundToInt(),
+            y = (direction.offsetY * easedProgress).roundToInt(),
+        )
+    }
+
+    private companion object {
+        const val MOVE_FRACTION = 0.24f
+        const val MIN_MOVE_DURATION_MS = 350L
+        const val MAX_MOVE_DURATION_MS = 550L
+        const val SETTLE_DURATION_MS = 200L
     }
 }

@@ -16,9 +16,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.pixelpet.avatar.PetAnimationState
 
 @Composable
-fun PixelPetApp() {
+fun PixelPetApp(debugVisualState: PetAnimationState? = null) {
     MaterialTheme(
         colorScheme = darkColorScheme(
             background = Color(0xFF0B0F1A),
@@ -36,7 +37,7 @@ fun PixelPetApp() {
         ) {
             RotatePhoneBlocker()
         } else {
-            PixelPetScreen()
+            PixelPetScreen(debugVisualState = debugVisualState)
         }
     }
 }

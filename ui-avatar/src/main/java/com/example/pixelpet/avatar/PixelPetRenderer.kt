@@ -11,6 +11,14 @@ import kotlin.math.floor
 import kotlin.math.min
 import kotlin.math.roundToInt
 
+internal data class PixelSpriteLayout(
+    val scale: Int,
+    val destinationLeft: Int,
+    val destinationTop: Int,
+    val destinationWidth: Int,
+    val destinationHeight: Int,
+)
+
 object PixelPetRenderer {
     fun DrawScope.drawSprite(
         spriteSheet: SpriteSheetImage,
@@ -19,39 +27,38 @@ object PixelPetRenderer {
         lookOffsetY: Int,
     ) {
         val sheet = spriteSheet.sheet
-        val scale = integerScaleFor(
+        val layout = spriteLayout(
             canvasWidth = size.width,
             canvasHeight = size.height,
             frameWidth = sheet.frameWidthPx,
             frameHeight = sheet.frameHeightPx,
+            lookOffsetX = lookOffsetX,
+            lookOffsetY = lookOffsetY,
         )
-        val destinationWidth = sheet.frameWidthPx * scale
-        val destinationHeight = sheet.frameHeightPx * scale
-        val destinationLeft = ((size.width - destinationWidth) / 2f).roundToInt() + lookOffsetX * scale
-        val destinationTop = ((size.height - destinationHeight) / 2f).roundToInt() + lookOffsetY * scale
         val sourceFrame = sheet.frameRect(frameIndex.coerceIn(0, sheet.frameCount - 1))
 
         drawImage(
             image = spriteSheet.image,
             srcOffset = IntOffset(sourceFrame.left, sourceFrame.top),
             srcSize = IntSize(sourceFrame.width, sourceFrame.height),
-            dstOffset = IntOffset(destinationLeft, destinationTop),
-            dstSize = IntSize(destinationWidth, destinationHeight),
+            dstOffset = IntOffset(layout.destinationLeft, layout.destinationTop),
+            dstSize = IntSize(layout.destinationWidth, layout.destinationHeight),
             filterQuality = FilterQuality.None,
         )
     }
 
     fun DrawScope.drawFallback(frame: PetAnimationFrame) {
-        val scale = integerScaleFor(
+        val layout = spriteLayout(
             canvasWidth = size.width,
             canvasHeight = size.height,
             frameWidth = SpriteSheet.FRAME_WIDTH_PX,
             frameHeight = SpriteSheet.FRAME_HEIGHT_PX,
+            lookOffsetX = frame.lookOffsetX,
+            lookOffsetY = frame.lookOffsetY,
         )
-        val destinationWidth = SpriteSheet.FRAME_WIDTH_PX * scale
-        val destinationHeight = SpriteSheet.FRAME_HEIGHT_PX * scale
-        val originX = ((size.width - destinationWidth) / 2f).roundToInt() + frame.lookOffsetX * scale
-        val originY = ((size.height - destinationHeight) / 2f).roundToInt() + frame.lookOffsetY * scale
+        val scale = layout.scale
+        val originX = layout.destinationLeft
+        val originY = layout.destinationTop
         val eyeHeightPx = fallbackEyeHeight(frame)
         val eyeTopPx = 16 - eyeHeightPx / 2
 
@@ -66,14 +73,42 @@ object PixelPetRenderer {
         }
     }
 
+    internal fun spriteLayout(
+        canvasWidth: Float,
+        canvasHeight: Float,
+        frameWidth: Int,
+        frameHeight: Int,
+        lookOffsetX: Int,
+        lookOffsetY: Int,
+    ): PixelSpriteLayout {
+        val scale = integerScaleFor(
+            canvasWidth = canvasWidth,
+            canvasHeight = canvasHeight,
+            frameWidth = frameWidth,
+            frameHeight = frameHeight,
+        )
+        val destinationWidth = frameWidth * scale
+        val destinationHeight = frameHeight * scale
+        val destinationLeft = ((canvasWidth - destinationWidth) / 2f).roundToInt() + lookOffsetX * scale
+        val destinationTop = ((canvasHeight - destinationHeight) / 2f).roundToInt() + lookOffsetY * scale
+
+        return PixelSpriteLayout(
+            scale = scale,
+            destinationLeft = destinationLeft,
+            destinationTop = destinationTop,
+            destinationWidth = destinationWidth,
+            destinationHeight = destinationHeight,
+        )
+    }
+
     private fun integerScaleFor(
         canvasWidth: Float,
         canvasHeight: Float,
         frameWidth: Int,
         frameHeight: Int,
     ): Int {
-        val scale = floor(min(canvasWidth / frameWidth, canvasHeight / frameHeight)).toInt()
-        return scale.coerceAtLeast(1)
+        val fullScale = floor(min(canvasWidth / frameWidth, canvasHeight / frameHeight)).toInt()
+        return (fullScale * SPRITE_SCALE_RATIO).roundToInt().coerceAtLeast(1)
     }
 
     private fun DrawScope.drawPixelRect(
@@ -112,4 +147,6 @@ object PixelPetRenderer {
             else -> 8
         }
     }
+
+    private const val SPRITE_SCALE_RATIO = 0.60f
 }

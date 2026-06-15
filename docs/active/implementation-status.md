@@ -1,3 +1,68 @@
+## AutoDev Run - 2026-06-15 Happy Reward Sparkle Animation
+
+**Task:** Add Happy Reward Sparkle animation to the active pixel pet avatar.
+**Build:** PASSED with `.\gradlew.bat assembleDebug`.
+**Tests:** PASSED with `.\gradlew.bat :ui-avatar:testDebugUnitTest --stacktrace`.
+
+**Implemented:**
+
+- Copied `resources/pet/eyes/happy_reward_sparkle.png` into `app/src/main/assets/pet/eyes/happy_reward_sparkle.png`.
+- Added the `happy_reward_sparkle` animation clip with 64x32 frames and per-frame timings of 220ms, 180ms, 420ms, and 520ms.
+- Added `PetAnimationState.HappyReward` and routed it to the sparkle sheet through the active `ui-avatar` runtime.
+- Added a narrow `enterHappyReward(nowMs)` controller trigger that plays the reward clip once, then returns to idle with blink scheduling preserved.
+- Extended existing avatar debug logging with loaded happy reward frame count.
+- Added unit coverage for clip name mapping, asset sheet selection, and reward timing/completion.
+
+**Autonomous decision notes:**
+
+- Kept the reward animation one-shot instead of looping to match the temporary reward behavior and avoid aggressive replay.
+- Did not add a new app product feature or debug screen; the active Home screen has no tap/feed/play reward hook yet.
+
+**Next Recommended Task:** Wire positive pet interactions to `enterHappyReward(...)` when the app has an interaction/reward state surface.
+
+---
+
+## AutoDev Run - 2026-06-15 Runtime Diagnostics
+
+**Task:** Add Codex-readable runtime logging and investigate app stopping during operation.
+**Build:** PASSED with `.\gradlew.bat :app:testDebugUnitTest :ui-avatar:testDebugUnitTest assembleDebug --stacktrace`.
+**Runtime check:** PASSED on `emulator-5554` with `PixelPetTrace` logcat filtering.
+
+**Implemented:**
+
+- Added `PixelPetTrace` logs for crash handler install, Activity lifecycle, trim-memory, asset loading, avatar loop start, animation state transitions, and 1-second avatar frame heartbeats.
+- Added heap usage to lifecycle and avatar heartbeat logs.
+- Added a hidden debug intent extra, `pixelpet.debug_visual_state=curious`, so Codex can launch the CURIOUS animation directly through adb.
+- Kept normal launch unchanged and verified idle/blink logs still run.
+
+**Root Cause Found:**
+
+- The observed app stop on the emulator was not an app exception. Logcat showed Android low memory killer terminating `com.example.pixelpet`: `reason: min watermark is breached even after kill`.
+- A separate `AndroidRuntime` crash in logcat belonged to `com.google.android.as`, not this app.
+
+**Next Recommended Task:** Investigate emulator/device memory pressure separately if the app continues to be killed outside this run.
+
+---
+
+## AutoDev Run - 2026-06-15 Curious Magnifier Animation
+
+**Task:** Add Curious Magnifier animation to the active pixel pet avatar.
+**Build:** PASSED with `.\gradlew.bat assembleDebug`.
+**Tests:** PASSED with `.\gradlew.bat :ui-avatar:testDebugUnitTest --stacktrace`.
+
+**Implemented:**
+
+- Copied `resources/pet/eyes/curious_magnifier.png` into `app/src/main/assets/pet/eyes/curious_magnifier.png`.
+- Added the `curious_magnifier` animation clip with 64x32 frames and per-frame timings of 220ms, 180ms, 520ms, and 650ms.
+- Added `PetAnimationState.Curious` and routed it to the magnifier clip through the active `ui-avatar` runtime.
+- Added a narrow `enterCurious(nowMs)` controller trigger and a debug-only `PixelPetAvatar(debugVisualState = PetAnimationState.Curious)` hook for manual preview.
+- Kept rendering through Compose Canvas with `FilterQuality.None` and integer-scaled destination sizes.
+- Preserved idle/blink selection so a missing curious sheet does not disable existing idle or blink rendering.
+
+**Next Recommended Task:** Add a proper R5 debug preview screen that can manually switch avatar emotion states.
+
+---
+
 ## AutoDev Run - 2026-06-14 Landscape Orientation Constraint
 
 **Task:** Make the app phone-landscape-only and document the constraint.

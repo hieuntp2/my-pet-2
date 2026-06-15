@@ -27,6 +27,7 @@ import kotlinx.coroutines.isActive
 fun PixelPetAvatar(
     modifier: Modifier = Modifier,
     showDebugInfo: Boolean = false,
+    debugVisualState: PetAnimationState? = null,
 ) {
     val context = LocalContext.current
     val assets = remember(context) { PixelPetAssetLoader.load(context.assets) }
@@ -39,22 +40,47 @@ fun PixelPetAvatar(
             blinkAnimation = SpriteAnimation.oneShot(
                 frameDurationsMs = blinkDurationsFor(assets.blink?.sheet?.frameCount ?: 5),
             ),
+            curiousAnimation = PetAnimationClips.curiousMagnifierAnimation(),
+            happyRewardAnimation = PetAnimationClips.happyRewardSparkleAnimation(),
         )
     }
     var frame by remember(controller) { mutableStateOf(controller.tick(nowMs = 0L)) }
     var idleMotion by remember(controller) { mutableStateOf(IdleMotionFrame.Neutral) }
     val motionEnabled = rememberSystemMotionEnabled()
 
-    LaunchedEffect(controller, motionEnabled) {
+    LaunchedEffect(controller, motionEnabled, debugVisualState) {
+        AvatarDebugLog.avatarLoopStarted(
+            idleFrames = assets.idle?.sheet?.frameCount,
+            blinkFrames = assets.blink?.sheet?.frameCount,
+            curiousFrames = assets.curiousMagnifier?.sheet?.frameCount,
+            happyRewardFrames = assets.happyRewardSparkle?.sheet?.frameCount,
+            missingAssets = assets.missingAssets,
+            debugVisualState = debugVisualState,
+        )
         val startNanos = withFrameNanos { it }
+        var lastHeartbeatAtMs = -HEARTBEAT_INTERVAL_MS
         while (isActive) {
             withFrameNanos { frameTimeNanos ->
                 val elapsedMs = (frameTimeNanos - startNanos) / 1_000_000L
+                when (debugVisualState) {
+                    PetAnimationState.Curious -> controller.enterCurious(elapsedMs)
+                    PetAnimationState.HappyReward -> controller.enterHappyReward(elapsedMs)
+                    else -> Unit
+                }
                 frame = controller.tick(elapsedMs)
                 idleMotion = IdleMotion.frameAt(
                     elapsedMs = elapsedMs,
                     motionEnabled = motionEnabled,
                 )
+                if (elapsedMs - lastHeartbeatAtMs >= HEARTBEAT_INTERVAL_MS) {
+                    AvatarDebugLog.frameHeartbeat(
+                        elapsedMs = elapsedMs,
+                        frame = frame,
+                        sheet = assets.sheetFor(frame.state)?.sheet,
+                        motionEnabled = motionEnabled,
+                    )
+                    lastHeartbeatAtMs = elapsedMs
+                }
             }
         }
     }
@@ -69,12 +95,9 @@ fun PixelPetAvatar(
                 },
         ) {
             Canvas(modifier = Modifier.fillMaxSize()) {
-                val sheet = when (frame.state) {
-                    PetAnimationState.LookingIdle -> assets.idle
-                    PetAnimationState.LookingBlink -> assets.blink
-                }
+                val sheet = assets.sheetFor(frame.state)
 
-                if (assets.hasRequiredSheets && sheet != null) {
+                if (sheet != null) {
                     with(PixelPetRenderer) {
                         drawSprite(
                             spriteSheet = sheet,
@@ -104,7 +127,7 @@ fun PixelPetAvatar(
             )
         } else if (showDebugInfo) {
             BasicText(
-                text = "${frame.state}  frame=${frame.frameIndex}  nextBlink=${frame.nextBlinkInMs}ms",
+                text = "${frame.state.clipName}  frame=${frame.frameIndex}  nextBlink=${frame.nextBlinkInMs}ms",
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
                     .padding(24.dp),
@@ -141,3 +164,5 @@ private fun blinkDurationsFor(frameCount: Int): List<Long> {
         }
     }
 }
+
+private const val HEARTBEAT_INTERVAL_MS = 1_000L

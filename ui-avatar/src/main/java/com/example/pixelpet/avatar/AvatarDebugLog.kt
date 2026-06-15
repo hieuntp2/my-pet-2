@@ -25,12 +25,14 @@ internal object AvatarDebugLog {
         blinkFrames: Int?,
         curiousFrames: Int?,
         happyRewardFrames: Int?,
+        startupPreviewEnabled: Boolean,
         missingAssets: List<String>,
         debugVisualState: PetAnimationState?,
     ) {
         info(
             "avatar_loop_started idleFrames=$idleFrames blinkFrames=$blinkFrames " +
                 "curiousFrames=$curiousFrames happyRewardFrames=$happyRewardFrames " +
+                "startupPreviewEnabled=$startupPreviewEnabled " +
                 "missingAssets=${missingAssets.joinToString(prefix = "[", postfix = "]")} " +
                 "debugVisualState=${debugVisualState?.clipName ?: "none"}",
         )

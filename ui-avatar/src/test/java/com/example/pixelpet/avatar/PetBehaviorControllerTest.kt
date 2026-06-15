@@ -5,6 +5,47 @@ import org.junit.Test
 
 class PetBehaviorControllerTest {
     @Test
+    fun startupPreviewPlaysEachStageOnceThenReturnsToNormalRuntime() {
+        val controller = PetBehaviorController(
+            idleAnimation = SpriteAnimation.looping(frameCount = 4, frameDurationMs = 150),
+            blinkAnimation = SpriteAnimation.oneShot(frameDurationsMs = listOf(100, 100)),
+            curiousAnimation = SpriteAnimation.looping(frameDurationsMs = listOf(100, 100, 100, 100)),
+            happyRewardAnimation = SpriteAnimation.oneShot(frameDurationsMs = listOf(100, 100, 100, 100)),
+            startupPreviewEnabled = true,
+            random = ScriptedAvatarRandom(
+                longs = listOf(20_000, 9_000, 2_500, 4_000),
+                floats = listOf(0.50f),
+            ),
+            config = PetBehaviorConfig(
+                initialBlinkDelayMinMs = 20_000,
+                initialBlinkDelayMaxMs = 20_000,
+            ),
+        )
+
+        assertEquals(PetAnimationState.LookingIdle, controller.tick(nowMs = 0).state)
+        assertEquals(PetAnimationState.LookingIdle, controller.tick(nowMs = 599).state)
+        assertEquals(PetAnimationState.LookingBlink, controller.tick(nowMs = 600).state)
+        assertEquals(PetAnimationState.Curious, controller.tick(nowMs = 800).state)
+        assertEquals(PetAnimationState.HappyReward, controller.tick(nowMs = 1_200).state)
+        assertEquals(PetAnimationState.LookingIdle, controller.tick(nowMs = 1_600).state)
+        assertEquals(PetAnimationState.LookingIdle, controller.tick(nowMs = 4_099).state)
+        assertEquals(PetAnimationState.LookingBlink, controller.tick(nowMs = 4_100).state)
+    }
+
+    @Test
+    fun defaultStartupPreviewIncludesAllCurrentVisualStages() {
+        assertEquals(
+            listOf(
+                PetAnimationState.LookingIdle,
+                PetAnimationState.LookingBlink,
+                PetAnimationState.Curious,
+                PetAnimationState.HappyReward,
+            ),
+            PetStartupPreview.DefaultStageStates,
+        )
+    }
+
+    @Test
     fun startsBlinkWhenScheduledAndReturnsToIdleAfterOneShotCompletes() {
         val controller = PetBehaviorController(
             idleAnimation = SpriteAnimation.looping(frameCount = 4, frameDurationMs = 150),

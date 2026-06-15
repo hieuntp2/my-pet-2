@@ -29,6 +29,8 @@ class PetBehaviorController(
     private val blinkAnimation: SpriteAnimation,
     private val curiousAnimation: SpriteAnimation = PetAnimationClips.curiousMagnifierAnimation(),
     private val happyRewardAnimation: SpriteAnimation = PetAnimationClips.happyRewardSparkleAnimation(),
+    private val startupPreviewEnabled: Boolean = false,
+    private val startupPreviewStages: List<PetAnimationState> = PetStartupPreview.DefaultStageStates,
     private val random: AvatarRandom = KotlinAvatarRandom(),
     private val config: PetBehaviorConfig = PetBehaviorConfig(),
 ) {
@@ -46,27 +48,34 @@ class PetBehaviorController(
     private var pendingDoubleBlinkGapMs: Long? = null
     private var activeGaze: ActiveGaze? = null
     private var lastGazeDirection: LookDirection? = null
+    private var startupPreviewIndex = if (startupPreviewEnabled && startupPreviewStages.isNotEmpty()) {
+        0
+    } else {
+        STARTUP_PREVIEW_COMPLETE
+    }
 
     fun tick(nowMs: Long): PetAnimationFrame {
         val safeNowMs = nowMs.coerceAtLeast(0L)
+
+        val previewActive = updateStartupPreview(safeNowMs)
 
         if (state == PetAnimationState.HappyReward && happyRewardAnimation.isComplete(safeNowMs - stateStartedAtMs)) {
             finishHappyReward(safeNowMs)
         }
 
-        if (state == PetAnimationState.LookingBlink && blinkAnimation.isComplete(safeNowMs - stateStartedAtMs)) {
+        if (!previewActive && state == PetAnimationState.LookingBlink && blinkAnimation.isComplete(safeNowMs - stateStartedAtMs)) {
             finishBlink(safeNowMs)
         }
 
         val doubleBlinkAtMs = pendingDoubleBlinkAtMs
-        if (state == PetAnimationState.LookingIdle && doubleBlinkAtMs != null && safeNowMs >= doubleBlinkAtMs) {
+        if (!previewActive && state == PetAnimationState.LookingIdle && doubleBlinkAtMs != null && safeNowMs >= doubleBlinkAtMs) {
             pendingDoubleBlinkAtMs = null
             startBlink(safeNowMs, canScheduleDoubleBlink = false)
-        } else if (state == PetAnimationState.LookingIdle && pendingDoubleBlinkAtMs == null && safeNowMs >= nextBlinkAtMs) {
+        } else if (!previewActive && state == PetAnimationState.LookingIdle && pendingDoubleBlinkAtMs == null && safeNowMs >= nextBlinkAtMs) {
             startBlink(safeNowMs, canScheduleDoubleBlink = true)
         }
 
-        if (state == PetAnimationState.LookingIdle) {
+        if (!previewActive && state == PetAnimationState.LookingIdle) {
             updateGaze(safeNowMs)
         }
 
@@ -89,6 +98,7 @@ class PetBehaviorController(
 
     fun enterCurious(nowMs: Long) {
         val safeNowMs = nowMs.coerceAtLeast(0L)
+        startupPreviewIndex = STARTUP_PREVIEW_COMPLETE
         if (state == PetAnimationState.Curious) {
             return
         }
@@ -102,6 +112,7 @@ class PetBehaviorController(
 
     fun enterHappyReward(nowMs: Long) {
         val safeNowMs = nowMs.coerceAtLeast(0L)
+        startupPreviewIndex = STARTUP_PREVIEW_COMPLETE
         if (state == PetAnimationState.HappyReward) {
             return
         }
@@ -111,6 +122,51 @@ class PetBehaviorController(
         activeGaze = null
         pendingDoubleBlinkAtMs = null
         pendingDoubleBlinkGapMs = null
+    }
+
+    private fun updateStartupPreview(nowMs: Long): Boolean {
+        if (startupPreviewIndex == STARTUP_PREVIEW_COMPLETE) {
+            return false
+        }
+
+        while (startupPreviewIndex in startupPreviewStages.indices) {
+            val previewState = startupPreviewStages[startupPreviewIndex]
+            if (state != previewState) {
+                enterPreviewState(previewState, nowMs)
+            }
+
+            val elapsedMs = nowMs - stateStartedAtMs
+            if (elapsedMs < previewDurationFor(previewState)) {
+                return true
+            }
+
+            startupPreviewIndex += 1
+        }
+
+        startupPreviewIndex = STARTUP_PREVIEW_COMPLETE
+        changeState(PetAnimationState.LookingIdle, nowMs, reason = "startup_preview_complete")
+        stateStartedAtMs = nowMs
+        activeGaze = null
+        pendingDoubleBlinkAtMs = null
+        pendingDoubleBlinkGapMs = null
+        nextBlinkAtMs = nowMs + random.nextLong(config.minBlinkIntervalMs, config.maxBlinkIntervalMs)
+        nextGazeAtMs = nowMs + random.nextLong(config.minGazeIntervalMs, config.maxGazeIntervalMs)
+        return false
+    }
+
+    private fun enterPreviewState(previewState: PetAnimationState, nowMs: Long) {
+        changeState(previewState, nowMs, reason = "startup_preview_stage")
+        stateStartedAtMs = nowMs
+        activeGaze = null
+        pendingDoubleBlinkAtMs = null
+        pendingDoubleBlinkGapMs = null
+    }
+
+    private fun previewDurationFor(previewState: PetAnimationState): Long = when (previewState) {
+        PetAnimationState.LookingIdle -> PetStartupPreview.IDLE_STAGE_DURATION_MS
+        PetAnimationState.LookingBlink -> blinkAnimation.totalDurationMs
+        PetAnimationState.Curious -> curiousAnimation.totalDurationMs
+        PetAnimationState.HappyReward -> happyRewardAnimation.totalDurationMs
     }
 
     private fun startBlink(nowMs: Long, canScheduleDoubleBlink: Boolean) {
@@ -177,6 +233,10 @@ class PetBehaviorController(
             AvatarDebugLog.stateChanged(oldState, newState, nowMs, reason)
         }
         state = newState
+    }
+
+    private companion object {
+        const val STARTUP_PREVIEW_COMPLETE = -1
     }
 }
 

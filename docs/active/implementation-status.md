@@ -1,3 +1,34 @@
+## AutoDev Run - 2026-06-15 Startup Avatar Stage Preview
+
+**Task:** Run each current avatar stage once on app startup, then return to normal random idle behavior.
+**Build:** PASSED with `.\gradlew.bat clean :ui-avatar:testDebugUnitTest assembleDebug --stacktrace`.
+**Runtime check:** PASSED on `emulator-5554` with `PixelPetTrace` logcat filtering.
+
+**Implemented:**
+
+- Added `PetStartupPreview.DefaultStageStates` as the single ordered list for startup preview stages.
+- Added startup preview playback to the active `ui-avatar` behavior controller.
+- Startup preview now plays `LookingIdle`, `LookingBlink`, `Curious`, and `HappyReward` once when Home opens normally.
+- After preview completion, the controller returns to normal idle/blink/gaze behavior with fresh random scheduling.
+- Disabled startup preview when a debug visual state is explicitly supplied.
+- Added runtime logging for `startupPreviewEnabled`.
+- Added unit tests for startup preview sequencing and the default stage list.
+
+**Runtime evidence:**
+
+- Logcat showed `startupPreviewEnabled=true`.
+- State sequence observed: `looking_idle -> looking_blink -> curious_magnifier -> happy_reward_sparkle -> looking_idle`.
+- A normal random blink occurred after returning to idle.
+
+**Autonomous decision notes:**
+
+- Kept the future extension point as a state list, so new stages can be previewed by adding them to `PetStartupPreview.DefaultStageStates`.
+- Kept the behavior in `ui-avatar`; no legacy `pixel-avatar` changes.
+
+**Next Recommended Task:** Add a real interaction/reward path that calls `enterHappyReward(...)` outside startup preview.
+
+---
+
 ## AutoDev Run - 2026-06-15 Happy Reward Sparkle Animation
 
 **Task:** Add Happy Reward Sparkle animation to the active pixel pet avatar.

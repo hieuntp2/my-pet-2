@@ -19,7 +19,10 @@ import androidx.compose.ui.unit.sp
 import com.example.pixelpet.avatar.PetAnimationState
 
 @Composable
-fun PixelPetApp(debugVisualState: PetAnimationState? = null) {
+fun PixelPetApp(
+    debugVisualState: PetAnimationState? = null,
+    onPetInteraction: () -> Unit = {},
+) {
     MaterialTheme(
         colorScheme = darkColorScheme(
             background = Color(0xFF0B0F1A),
@@ -37,7 +40,10 @@ fun PixelPetApp(debugVisualState: PetAnimationState? = null) {
         ) {
             RotatePhoneBlocker()
         } else {
-            PixelPetScreen(debugVisualState = debugVisualState)
+            PixelPetScreen(
+                debugVisualState = debugVisualState,
+                onPetInteraction = onPetInteraction,
+            )
         }
     }
 }

@@ -2,6 +2,7 @@ package com.example.pixelpet.avatar
 
 import android.provider.Settings
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -11,14 +12,18 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.isActive
@@ -28,6 +33,7 @@ fun PixelPetAvatar(
     modifier: Modifier = Modifier,
     showDebugInfo: Boolean = false,
     debugVisualState: PetAnimationState? = null,
+    onPetClick: () -> Unit = {},
 ) {
     val context = LocalContext.current
     val assets = remember(context) { PixelPetAssetLoader.load(context.assets) }
@@ -49,6 +55,10 @@ fun PixelPetAvatar(
     }
     var frame by remember(controller) { mutableStateOf(controller.tick(nowMs = 0L)) }
     var idleMotion by remember(controller) { mutableStateOf(IdleMotionFrame.Neutral) }
+    var avatarCanvasSize by remember { mutableStateOf(IntSize.Zero) }
+    val currentFrame by rememberUpdatedState(frame)
+    val currentCanvasSize by rememberUpdatedState(avatarCanvasSize)
+    val currentOnPetClick by rememberUpdatedState(onPetClick)
     val motionEnabled = rememberSystemMotionEnabled()
 
     LaunchedEffect(controller, motionEnabled, debugVisualState) {
@@ -98,7 +108,34 @@ fun PixelPetAvatar(
                     scaleY = idleMotion.scaleY
                 },
         ) {
-            Canvas(modifier = Modifier.fillMaxSize()) {
+            Canvas(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .onSizeChanged { avatarCanvasSize = it }
+                    .pointerInput(assets) {
+                        detectTapGestures { tapOffset ->
+                            val activeFrame = currentFrame
+                            val activeSheet = assets.sheetFor(activeFrame.state)?.sheet
+                            val frameWidth = activeSheet?.frameWidthPx ?: SpriteSheet.FRAME_WIDTH_PX
+                            val frameHeight = activeSheet?.frameHeightPx ?: SpriteSheet.FRAME_HEIGHT_PX
+
+                            if (
+                                PetTapTarget.containsTap(
+                                    canvasWidth = currentCanvasSize.width,
+                                    canvasHeight = currentCanvasSize.height,
+                                    frameWidth = frameWidth,
+                                    frameHeight = frameHeight,
+                                    lookOffsetX = activeFrame.lookOffsetX,
+                                    lookOffsetY = activeFrame.lookOffsetY,
+                                    tapX = tapOffset.x,
+                                    tapY = tapOffset.y,
+                                )
+                            ) {
+                                currentOnPetClick()
+                            }
+                        }
+                    },
+            ) {
                 val sheet = assets.sheetFor(frame.state)
 
                 if (sheet != null) {

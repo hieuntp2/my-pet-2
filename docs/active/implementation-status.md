@@ -1,3 +1,53 @@
+## AutoDev Run - 2026-06-15 Delayed Screen Dim and Pet Wake Tap
+
+**Task:** Sau 30 giây mới dim màn hình; khi click vào pet thì bật độ sáng lại bình thường.
+**Build:** PASSED with `.\gradlew.bat :app:testDebugUnitTest :ui-avatar:testDebugUnitTest assembleDebug --stacktrace`.
+**Tests:** PASSED with `.\gradlew.bat :app:testDebugUnitTest --tests com.example.pixelpet.ScreenPowerPolicyTest :ui-avatar:testDebugUnitTest --tests com.example.pixelpet.avatar.PetTapTargetTest --stacktrace`.
+
+**Implemented:**
+
+- Changed startup screen policy to keep the screen awake at system-default brightness first.
+- Added a 30-second delayed dim timer in `MainActivity`.
+- Restored normal/system brightness on pet interaction and restarted the 30-second dim timer.
+- Passed the pet interaction callback through `PixelPetApp` and `PixelPetScreen`.
+- Added sprite-bounds tap detection in `ui-avatar` so taps target the rendered pet area instead of the whole screen.
+- Added unit coverage for delayed dim policy, interaction restore behavior, and pet tap hit testing.
+
+**Autonomous decision notes:**
+
+- Interpreted "bật độ sáng lại bình thường" as restoring the Android system/default brightness for this app window, not forcing maximum brightness.
+- Kept `FLAG_KEEP_SCREEN_ON` active so the screen dims instead of sleeping while the pet is visible.
+- Reset the 30-second dim timer after each pet tap so repeated interaction keeps the screen at normal brightness.
+- Preserved asset loading, blink behavior, idle animation, and phone-landscape handling.
+
+**Next Recommended Task:** Add a small runtime debug log/manual device check for the 30-second timer and pet tap behavior on the target phone.
+
+---
+
+## AutoDev Run - 2026-06-15 Startup Screen Dim Policy
+
+**Task:** Khi bật app, chỉ dim độ sáng màn hình thay vì để thiết bị sleep/tắt màn hình.
+**Build:** PASSED with `.\gradlew.bat :app:testDebugUnitTest :ui-avatar:testDebugUnitTest assembleDebug --stacktrace`.
+**Tests:** PASSED with `.\gradlew.bat :app:testDebugUnitTest --tests com.example.pixelpet.ScreenPowerPolicyTest --stacktrace`.
+
+**Implemented:**
+
+- Added a startup screen power policy in the app module.
+- Applied `FLAG_KEEP_SCREEN_ON` in `MainActivity` so the pet screen stays awake while running.
+- Set the activity window brightness override to `0.18f` to dim only the app window at launch.
+- Added lifecycle diagnostics for the applied screen power policy.
+- Added unit coverage for the dim-only startup policy.
+
+**Autonomous decision notes:**
+
+- Treated the request as a launch/runtime screen policy change, not a pet sleep-state feature.
+- Used per-window brightness instead of system brightness, wake locks, permissions, or device-admin APIs.
+- Kept avatar asset loading, blink runtime, idle animation, and phone-landscape handling unchanged.
+
+**Next Recommended Task:** Add a small in-app debug toggle for dim policy only if manual runtime testing shows the fixed `0.18f` level is too dark or too bright on target devices.
+
+---
+
 ## AutoDev Run - 2026-06-15 Startup Avatar Stage Preview
 
 **Task:** Run each current avatar stage once on app startup, then return to normal random idle behavior.

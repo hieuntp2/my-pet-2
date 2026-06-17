@@ -12,12 +12,16 @@ import com.example.pixelpet.avatar.PetAnimationState
 import com.example.pixelpet.avatar.PixelPetAvatar
 
 @Composable
-fun PixelPetScreen(debugVisualState: PetAnimationState? = null) {
+fun PixelPetScreen(
+    debugVisualState: PetAnimationState? = null,
+    onPetInteraction: () -> Unit = {},
+) {
     Box(modifier = Modifier.fillMaxSize()) {
         CyberBackground(modifier = Modifier.fillMaxSize())
         PixelPetAvatar(
             modifier = Modifier.fillMaxSize(),
             debugVisualState = debugVisualState,
+            onPetClick = onPetInteraction,
         )
     }
 }
